@@ -1,0 +1,10 @@
+{
+  "domain": "kanboardizer",
+  "name": "Kanboardizer",
+  "version": "1.0.0",
+  "documentation": "https://git.gitea.com/alessio/kanboardizer",
+  "dependencies": [],
+  "codeowners": ["@alessio"],
+  "requirements": ["requests"],
+  "repository": "https://repo.kenshiro.local/alessio/kanboardizer"
+}
