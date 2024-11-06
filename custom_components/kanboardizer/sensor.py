@@ -16,13 +16,17 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     api_url = hass.data["kanboardizer"]["api_url"]
     api_token = hass.data["kanboardizer"]["api_token"]
     """user = hass.data["kanboardizer"]["user"]"""
+    _LOGGER.info("Initializing sensors...")
 
-    sensors = []
-    sensors.append(KanboardizerUserCountSensor(api_url, api_token, hass))
-    sensors.append(KanboardizerProjectCountSensor(api_url, api_token, hass))
-    sensors.append(KanboardizerTaskCountSensor(api_url, api_token, hass))
-    sensors.append(KanboardizerDeadlineSensor(api_url, api_token, hass))
+    sensors = [
+        KanboardizerUserCountSensor(api_url, api_token, hass),
+        KanboardizerProjectCountSensor(api_url, api_token, hass),
+        KanboardizerTaskCountSensor(api_url, api_token, hass),
+        KanboardizerDeadlineSensor(api_url, api_token, hass)
+    ]
+        
     add_entities(sensors, True)
+    _LOGGER.info("Initialized all sensors")
 
 class KanboardizerSensor(Entity):
     """Representation of a base Kanboardizer sensor."""
@@ -33,7 +37,7 @@ class KanboardizerSensor(Entity):
         self.hass = hass
         self._state = None
         self._attributes = {}
-
+        
     @property
     def state(self):
         """Return the state of the sensor."""
@@ -49,6 +53,7 @@ class KanboardizerUserCountSensor(KanboardizerSensor):
     def __init__(self, api_url, api_token, hass):
         """Initialize the user count sensor."""
         super().__init__(api_url, api_token, hass)
+        _LOGGER.info("Initialized User Count Sensor")
 
     @property
     def name(self):
@@ -59,6 +64,7 @@ class KanboardizerUserCountSensor(KanboardizerSensor):
     def update(self):
         """Fetch new state data for the sensor."""
         try:
+            _LOGGER.info("Updating User Count Sensor")            
             response = requests.post(
                 self.api_url,
                 json={
@@ -69,7 +75,9 @@ class KanboardizerUserCountSensor(KanboardizerSensor):
                 },
             )
             data = response.json()["result"]
+            _LOGGER.debug(f"Response: {data}")
             self._state = len(data)
+            _LOGGER.info("Updated User Count Sensor")
         except Exception as e:
             _LOGGER.error(f"Error fetching user data: {e}")
 
@@ -78,6 +86,7 @@ class KanboardizerProjectCountSensor(KanboardizerSensor):
     def __init__(self, api_url, api_token, hass):
         """Initialize the project count sensor."""
         super().__init__(api_url, api_token, hass)
+        _LOGGER.info("Initialized Project Count Sensor")
 
     @property
     def name(self):
@@ -88,6 +97,7 @@ class KanboardizerProjectCountSensor(KanboardizerSensor):
     def update(self):
         """Fetch new state data for the sensor."""
         try:
+            _LOGGER.info("Updating Project Count Sensor")
             response = requests.post(
                 self.api_url,
                 json={
@@ -101,6 +111,7 @@ class KanboardizerProjectCountSensor(KanboardizerSensor):
             self._state = len(data)
             self._attributes = {"total_projects": len(data)}
             self._attributes["open_projects"] = len([project for project in data if project["is_active"] == 1])
+            _LOGGER.info("Updated Project Count Sensor")
         except Exception as e:
             _LOGGER.error(f"Error fetching project data: {e}")
 
@@ -109,6 +120,7 @@ class KanboardizerTaskCountSensor(KanboardizerSensor):
     def __init__(self, api_url, api_token, hass):
         """Initialize the task count sensor."""
         super().__init__(api_url, api_token, hass)
+        _LOGGER.info("Initialized Task Count Sensor")
 
     @property
     def name(self):
@@ -119,6 +131,7 @@ class KanboardizerTaskCountSensor(KanboardizerSensor):
     def update(self):
         """Fetch new state data for the sensor."""
         try:
+            _LOGGER.info("Updating Task Count Sensor")
             response = requests.post(
                 self.api_url,
                 json={
@@ -130,6 +143,7 @@ class KanboardizerTaskCountSensor(KanboardizerSensor):
             )
             data = response.json()["result"]
             self._state = len(data)
+            _LOGGER.info("Updated Task Count Sensor")
         except Exception as e:
             _LOGGER.error(f"Error fetching task data: {e}")
 
@@ -138,6 +152,7 @@ class KanboardizerDeadlineSensor(KanboardizerSensor):
     def __init__(self, api_url, api_token, hass):
         """Initialize the deadline sensor."""
         super().__init__(api_url, api_token, hass)
+        _LOGGER.info("Initialized Deadline Sensor")
 
     @property
     def name(self):
@@ -148,6 +163,7 @@ class KanboardizerDeadlineSensor(KanboardizerSensor):
     def update(self):
         """Fetch new state data for the sensor."""
         try:
+            _LOGGER.info("Updating Deadline Sensor")
             response = requests.post(
                 self.api_url,
                 json={
@@ -161,6 +177,7 @@ class KanboardizerDeadlineSensor(KanboardizerSensor):
             deadlines = [task for task in data if task["date_due"]]
             self._state = len(deadlines)
             self._attributes = {"deadlines": deadlines}
+            _LOGGER.info("Updated Deadline Sensor")
             
             # Genera eventi di allarme per i task scaduti
             current_time = int(time.time())
@@ -171,5 +188,6 @@ class KanboardizerDeadlineSensor(KanboardizerSensor):
                         "title": task["title"],
                         "due_date": task["date_due"]
                     })
+            _LOGGER.info("Sent Deadline Overdue Events")
         except Exception as e:
             _LOGGER.error(f"Error fetching deadline data: {e}")
