@@ -5,7 +5,7 @@ import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-DOMAIN = "Kanboardizer"
+DOMAIN = "kanboardizer"
 
 CONFIG_SCHEMA = vol.Schema(
     {
