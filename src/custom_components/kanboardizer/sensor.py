@@ -65,8 +65,7 @@ class KanboardUserCountSensor(KanboardSensor):
                 json={
                     "jsonrpc": "2.0",
                     "method": "getAllUsers",
-                    "id": 1,
-                    "params": {"token": self.api_token},
+                    "id": 1
                 },
             )
             _LOGGER.debug(f"API Response: {response.json()}")
@@ -99,8 +98,7 @@ class KanboardProjectCountSensor(KanboardSensor):
                 json={
                     "jsonrpc": "2.0",
                     "method": "getAllProjects",
-                    "id": 1,
-                    "params": {"token": self.api_token},
+                    "id": 1
                 },
             )
             data = response.json()["result"]
@@ -132,8 +130,7 @@ class KanboardTaskCountSensor(KanboardSensor):
                 json={
                     "jsonrpc": "2.0",
                     "method": "getAllTasks",
-                    "id": 1,
-                    "params": {"token": self.api_token},
+                    "id": 1
                 },
             )
             data = response.json()["result"]
@@ -165,8 +162,7 @@ class KanboardProjectTaskCountSensor(KanboardSensor):
                 json={
                     "jsonrpc": "2.0",
                     "method": "getAllTasks",
-                    "id": 1,
-                    "params": {"token": self.api_token},
+                    "id": 1
                 },
             )
             data = response.json()["result"]
@@ -208,8 +204,7 @@ class KanboardCalendarSensor(KanboardSensor):
                 json={
                     "jsonrpc": "2.0",
                     "method": "getAllTasks",
-                    "id": 1,
-                    "params": {"token": self.api_token},
+                    "id": 1
                 },
             )
             data = response.json()["result"]
