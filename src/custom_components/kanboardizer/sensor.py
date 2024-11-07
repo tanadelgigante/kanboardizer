@@ -61,6 +61,7 @@ class KanboardUserCountSensor(KanboardSensor):
         try:
             response = requests.post(
                 self.api_url,
+                auth=('jsonrpc', self.api_token),
                 json={
                     "jsonrpc": "2.0",
                     "method": "getAllUsers",
@@ -94,6 +95,7 @@ class KanboardProjectCountSensor(KanboardSensor):
         try:
             response = requests.post(
                 self.api_url,
+                auth=('jsonrpc', self.api_token),
                 json={
                     "jsonrpc": "2.0",
                     "method": "getAllProjects",
@@ -126,6 +128,7 @@ class KanboardTaskCountSensor(KanboardSensor):
         try:
             response = requests.post(
                 self.api_url,
+                auth=('jsonrpc', self.api_token),
                 json={
                     "jsonrpc": "2.0",
                     "method": "getAllTasks",
@@ -158,6 +161,7 @@ class KanboardProjectTaskCountSensor(KanboardSensor):
         try:
             response = requests.post(
                 self.api_url,
+                auth=('jsonrpc', self.api_token),
                 json={
                     "jsonrpc": "2.0",
                     "method": "getAllTasks",
@@ -200,6 +204,7 @@ class KanboardCalendarSensor(KanboardSensor):
             _LOGGER.debug("Fetching task deadlines...")
             response = requests.post(
                 self.api_url,
+                auth=('jsonrpc', self.api_token),
                 json={
                     "jsonrpc": "2.0",
                     "method": "getAllTasks",
