@@ -29,6 +29,5 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
     hass.data[DOMAIN] = conf
     
     discovery.load_platform(hass, "sensor", DOMAIN, {}, config)
-    discovery.load_platform(hass, "calendar", DOMAIN, {}, config)
     
     return True
