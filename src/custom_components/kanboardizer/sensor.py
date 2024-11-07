@@ -101,7 +101,7 @@ class KanboardProjectCountSensor(KanboardSensor):
                 },
             )
             data = response.json()["result"]
-            self._state = len(data)
+            self._state = len([project for project in data if project["is_active"] == 1])
             self._attributes = {"total_projects": len(data)}
             self._attributes["open_projects"] = len([project for project in data if project["is_active"] == 1])
             self._attributes["closed_projects"] = len([project for project in data if project["is_active"] == 0])
@@ -182,7 +182,7 @@ class KanboardTaskCountSensor(KanboardSensor):
 
                 total_tasks += len(active_tasks_data) + len(stalled_tasks_data)
 
-            self._state = total_tasks
+            self._state = active_tasks
             self._attributes = {
                 "total_tasks": total_tasks,
                 "active_tasks": active_tasks,
