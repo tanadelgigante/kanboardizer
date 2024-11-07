@@ -1,74 +1,78 @@
-"""Calendar platform for Kanboardizer integration."""
+from datetime import timedelta, datetime
+import requests
+import logging
+from homeassistant.helpers.entity import Entity
+from homeassistant.util import Throttle
 
-from .const import DOMAIN, CALENDAR_NAME
-from argparse import OPTIONAL
-from datetime import datetime, timedelta
-from homeassistant.components.calendar import CalendarEntity, CalendarEvent
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import BaseCoordinatorEntity
-from typing import List
+MIN_TIME_BETWEEN_UPDATES = timedelta(minutes=10)
 
+_LOGGER = logging.getLogger(__name__)
 
-async def async_setup_entry(
-    hass: HomeAssistant,
-    config_entry: ConfigEntry,
-    async_add_entities: AddEntitiesCallback,
-) -> None:
-    """Set up the Kanboardizer calendar."""
-    coordinator = hass.data[DOMAIN][config_entry.entry_id]
-    async_add_entities([KanboardizerCalendar(coordinator)], True)
-
-
-class KanboardizerCalendar(BaseCoordinatorEntity, CalendarEntity):
-    """Kanboardizer Calendar class."""
-
-    def __init__(self, coordinator):
-        """Initialize the calendar."""
-        super().__init__(coordinator)
-        self._attr_name = CALENDAR_NAME
-        self._attr_unique_id = f"{DOMAIN}_calendar"
+class KanboardCalendarSensor(Entity):
+    """Sensor for Kanboard task deadlines."""
+    def __init__(self, api_url, api_token, hass):
+        """Initialize the calendar sensor."""
+        self.api_url = api_url
+        self.api_token = api_token
+        self.hass = hass
+        self._state = None
+        self._attributes = {}
+        self._name = "Kanboard Task Calendar"
 
     @property
-    def event(self) -> OPTIONAL[CalendarEvent]:
-        """Return the next upcoming event."""
-        events = self._get_events(
-            datetime.now(),
-            datetime.now() + timedelta(days=7)
-        )
-        return events[0] if events else None
+    def name(self):
+        """Return the name of the sensor."""
+        return self._name
 
-    async def async_get_events(
-        self,
-        hass: HomeAssistant,
-        start_date: datetime,
-        end_date: datetime
-    ) -> List[CalendarEvent]:
-        """Get all events in a specific time frame."""
-        return self._get_events(start_date, end_date)
+    @property
+    def state(self):
+        """Return the state of the sensor."""
+        return self._state
 
-    def _get_events(
-        self,
-        start_date: datetime,
-        end_date: datetime
-    ) -> List[CalendarEvent]:
-        """Get all events in a specific time frame."""
-        events = []
-        tasks = self.coordinator.data.get("tasks", [])
-        
-        for task in tasks:
-            if task["date_due"]:
-                due_date = datetime.fromtimestamp(task["date_due"])
-                
-                if start_date <= due_date <= end_date:
-                    event = CalendarEvent(
-                        summary=f"Task Due: {task['title']}",
-                        start=due_date,
-                        end=due_date + timedelta(hours=1),
-                        description=task.get("description", ""),
-                        location=None,
-                    )
-                    events.append(event)
-        
-        return sorted(events, key=lambda x: x.start)
+    @property
+    def extra_state_attributes(self):
+        """Return the state attributes."""
+        return self._attributes
+
+    @Throttle(MIN_TIME_BETWEEN_UPDATES)
+    def update(self):
+        """Fetch new state data for the sensor."""
+        try:
+            _LOGGER.debug("Fetching task deadlines...")
+            response = requests.post(
+                self.api_url,
+                json={
+                    "jsonrpc": "2.0",
+                    "method": "getAllTasks",
+                    "id": 1,
+                    "params": {"token": self.api_token},
+                },
+            )
+            data = response.json()["result"]
+            deadlines = [task for task in data if task["date_due"]]
+            _LOGGER.debug(f"Task deadlines: {deadlines}")
+            self._state = len(deadlines)
+            self._attributes = {"deadlines": deadlines}
+            
+            # Current time
+            current_time = datetime.now()
+            for task in deadlines:
+                task_due_date = datetime.fromtimestamp(task["date_due"])
+                days_until_due = (task_due_date - current_time).days
+                if days_until_due <= 2 and task_due_date > current_time:
+                    _LOGGER.debug(f"Task due soon: {task}")
+                    self.hass.bus.fire("kanboard_task_due_soon", {
+                        "task_id": task["id"],
+                        "title": task["title"],
+                        "due_date": task_due_date.isoformat(),
+                        "days_until_due": days_until_due
+                    })
+                elif task_due_date < current_time:
+                    _LOGGER.debug(f"Task overdue: {task}")
+                    self.hass.bus.fire("kanboard_task_overdue", {
+                        "task_id": task["id"],
+                        "title": task["title"],
+                        "due_date": task_due_date.isoformat()
+                    })
+        except Exception as e:
+            _LOGGER.error(f"Error fetching task deadlines: {e}")

@@ -1,196 +1,176 @@
-"""Platform for Kanboardizersensor integration."""
-from datetime import datetime, timedelta
+from datetime import timedelta
+import requests
 import logging
+from homeassistant.helpers.entity import Entity
+from homeassistant.util import Throttle
 
-from kanboard import Client
-
-from homeassistant.components.sensor import SensorEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, BaseCoordinatorEntity
-
-from .const import DOMAIN, DEFAULT_SCAN_INTERVAL
+MIN_TIME_BETWEEN_UPDATES = timedelta(minutes=10)
 
 _LOGGER = logging.getLogger(__name__)
 
-async def async_setup_entry(
-    hass: HomeAssistant,
-    config_entry: ConfigEntry,
-    async_add_entities: AddEntitiesCallback,
-) -> None:
-    """Set up the Kanboardizersensor."""
-    client = Client(
-        url=config_entry.data["url"],
-        token=config_entry.data["api_token"]
-    )
+def setup_platform(hass, config, add_entities, discovery_info=None):
+    """Set up the Kanboard sensor."""
+    api_url = hass.data["kanboardizer"]["api_url"]
+    api_token = hass.data["kanboardizer"]["api_token"]
 
-    coordinator = KanboardDataUpdateCoordinator(hass, client)
-    await coordinator.async_config_entry_first_refresh()
-
-    entities = [
-        KanboardUserCountSensor(coordinator),
-        KanboardProjectCountSensor(coordinator),
-        KanboardTaskCountSensor(coordinator),
+    sensors = [
+        KanboardUserCountSensor(api_url, api_token, hass),
+        KanboardProjectCountSensor(api_url, api_token, hass),
+        KanboardTaskCountSensor(api_url, api_token, hass),
+        KanboardProjectTaskCountSensor(api_url, api_token, hass)
     ]
+    
+    add_entities(sensors, True)
 
-    # Aggiungi sensori per ogni progetto
-    projects = coordinator.data.get("projects", [])
-    for project in projects:
-        entities.append(KanboardProjectTaskSensor(coordinator, project["id"], project["name"]))
+class KanboardSensor(Entity):
+    """Representation of a base Kanboard sensor."""
+    def __init__(self, api_url, api_token, hass):
+        """Initialize the sensor."""
+        self.api_url = api_url
+        self.api_token = api_token
+        self.hass = hass
+        self._state = None
+        self._attributes = {}
 
-    async_add_entities(entities)
+    @property
+    def state(self):
+        """Return the state of the sensor."""
+        return self._state
 
-class KanboardDataUpdateCoordinator(DataUpdateCoordinator):
-    """Class to manage fetching Kanboardizerdata."""
+    @property
+    def extra_state_attributes(self):
+        """Return the state attributes."""
+        return self._attributes
 
-    def __init__(self, hass: HomeAssistant, client: Client) -> None:
-        """Initialize."""
-        super().__init__(
-            hass,
-            _LOGGER,
-            name=DOMAIN,
-            update_interval=timedelta(seconds=DEFAULT_SCAN_INTERVAL),
-        )
-        self.client = client
+class KanboardUserCountSensor(KanboardSensor):
+    """Sensor for the number of users."""
+    def __init__(self, api_url, api_token, hass):
+        """Initialize the user count sensor."""
+        super().__init__(api_url, api_token, hass)
 
-    async def _async_update_data(self):
-        """Fetch data from Kanboard."""
-        data = {}
-        
-        # Recupera tutti gli utenti
-        data["users"] = await self.hass.async_add_executor_job(
-            self.client.get_all_users
-        )
-        
-        # Recupera tutti i progetti
-        data["projects"] = await self.hass.async_add_executor_job(
-            self.client.get_all_projects
-        )
-        
-        # Recupera tutti i task
-        data["tasks"] = []
-        for project in data["projects"]:
-            tasks = await self.hass.async_add_executor_job(
-                self.client.get_all_tasks,
-                project["id"]
+    @property
+    def name(self):
+        """Return the name of the sensor."""
+        return "Kanboard User Count"
+
+    @Throttle(MIN_TIME_BETWEEN_UPDATES)
+    def update(self):
+        """Fetch new state data for the sensor."""
+        try:
+            response = requests.post(
+                self.api_url,
+                json={
+                    "jsonrpc": "2.0",
+                    "method": "getAllUsers",
+                    "id": 1,
+                    "params": {"token": self.api_token},
+                },
             )
-            data["tasks"].extend(tasks)
-            
-        return data
+            data = response.json()["result"]
+            self._state = len(data)
+        except Exception as e:
+            _LOGGER.error(f"Error fetching user data: {e}")
 
-class KanboardUserCountSensor(BaseCoordinatorEntity, SensorEntity):
-    """Sensor for tracking number of Kanboardizerusers."""
-
-    def __init__(self, coordinator):
-        """Initialize the sensor."""
-        super().__init__(coordinator)
-        self._attr_name = "KanboardizerUsers"
-        self._attr_unique_id = f"{DOMAIN}_users"
+class KanboardProjectCountSensor(KanboardSensor):
+    """Sensor for the number of projects."""
+    def __init__(self, api_url, api_token, hass):
+        """Initialize the project count sensor."""
+        super().__init__(api_url, api_token, hass)
 
     @property
-    def state(self):
-        """Return the state of the sensor."""
-        return len(self.coordinator.data.get("users", []))
+    def name(self):
+        """Return the name of the sensor."""
+        return "Kanboard Project Count"
 
-class KanboardProjectCountSensor(BaseCoordinatorEntity, SensorEntity):
-    """Sensor for tracking number of Kanboardizerprojects."""
+    @Throttle(MIN_TIME_BETWEEN_UPDATES)
+    def update(self):
+        """Fetch new state data for the sensor."""
+        try:
+            response = requests.post(
+                self.api_url,
+                json={
+                    "jsonrpc": "2.0",
+                    "method": "getAllProjects",
+                    "id": 1,
+                    "params": {"token": self.api_token},
+                },
+            )
+            data = response.json()["result"]
+            self._state = len(data)
+            self._attributes = {"total_projects": len(data)}
+            self._attributes["open_projects"] = len([project for project in data if project["is_active"] == 1])
+            self._attributes["closed_projects"] = len([project for project in data if project["is_active"] == 0])
+        except Exception as e:
+            _LOGGER.error(f"Error fetching project data: {e}")
 
-    def __init__(self, coordinator):
-        """Initialize the sensor."""
-        super().__init__(coordinator)
-        self._attr_name = "KanboardizerProjects"
-        self._attr_unique_id = f"{DOMAIN}_projects"
-
-    @property
-    def state(self):
-        """Return the state of the sensor."""
-        projects = self.coordinator.data.get("projects", [])
-        return len(projects)
-
-    @property
-    def extra_state_attributes(self):
-        """Return the state attributes."""
-        projects = self.coordinator.data.get("projects", [])
-        open_projects = len([p for p in projects if p["is_active"] == 1])
-        closed_projects = len(projects) - open_projects
-        
-        return {
-            "open": open_projects,
-            "closed": closed_projects,
-            "total": len(projects)
-        }
-
-class KanboardTaskCountSensor(BaseCoordinatorEntity, SensorEntity):
-    """Sensor for tracking number of Kanboardizertasks."""
-
-    def __init__(self, coordinator):
-        """Initialize the sensor."""
-        super().__init__(coordinator)
-        self._attr_name = "KanboardizerTasks"
-        self._attr_unique_id = f"{DOMAIN}_tasks"
+class KanboardTaskCountSensor(KanboardSensor):
+    """Sensor for the number of tasks."""
+    def __init__(self, api_url, api_token, hass):
+        """Initialize the task count sensor."""
+        super().__init__(api_url, api_token, hass)
 
     @property
-    def state(self):
-        """Return the state of the sensor."""
-        return len(self.coordinator.data.get("tasks", []))
+    def name(self):
+        """Return the name of the sensor."""
+        return "Kanboard Task Count"
+
+    @Throttle(MIN_TIME_BETWEEN_UPDATES)
+    def update(self):
+        """Fetch new state data for the sensor."""
+        try:
+            response = requests.post(
+                self.api_url,
+                json={
+                    "jsonrpc": "2.0",
+                    "method": "getAllTasks",
+                    "id": 1,
+                    "params": {"token": self.api_token},
+                },
+            )
+            data = response.json()["result"]
+            self._state = len(data)
+            self._attributes = {"total_tasks": len(data)}
+            self._attributes["in_progress_tasks"] = len([task for task in data if task["is_active"] == 1])
+            self._attributes["stalled_tasks"] = len([task for task in data if task["is_active"] == 0])
+        except Exception as e:
+            _LOGGER.error(f"Error fetching task data: {e}")
+
+class KanboardProjectTaskCountSensor(KanboardSensor):
+    """Sensor for the number of tasks per project."""
+    def __init__(self, api_url, api_token, hass):
+        """Initialize the task per project count sensor."""
+        super().__init__(api_url, api_token, hass)
 
     @property
-    def extra_state_attributes(self):
-        """Return the state attributes."""
-        tasks = self.coordinator.data.get("tasks", [])
-        in_progress = len([t for t in tasks if t["is_active"] == 1])
-        stopped = len(tasks) - in_progress
-        
-        # Controllo scadenze
-        today = datetime.now()
-        due_soon = []
-        overdue = []
-        
-        for task in tasks:
-            if task["date_due"]:
-                due_date = datetime.fromtimestamp(task["date_due"])
-                if due_date < today:
-                    overdue.append(task["title"])
-                elif (due_date - today).days <= 2:
-                    due_soon.append(task["title"])
-        
-        return {
-            "in_progress": in_progress,
-            "stopped": stopped,
-            "total": len(tasks),
-            "due_soon": due_soon,
-            "overdue": overdue
-        }
+    def name(self):
+        """Return the name of the sensor."""
+        return "Kanboard Task Count per Project"
 
-class KanboardProjectTaskSensor(BaseCoordinatorEntity, SensorEntity):
-    """Sensor for tracking tasks in a specific Kanboardizerproject."""
-
-    def __init__(self, coordinator, project_id, project_name):
-        """Initialize the sensor."""
-        super().__init__(coordinator)
-        self.project_id = project_id
-        self._attr_name = f"KanboardizerProject {project_name} Tasks"
-        self._attr_unique_id = f"{DOMAIN}_project_{project_id}_tasks"
-
-    @property
-    def state(self):
-        """Return the state of the sensor."""
-        tasks = [t for t in self.coordinator.data.get("tasks", []) 
-                if t["project_id"] == self.project_id]
-        return len(tasks)
-
-    @property
-    def extra_state_attributes(self):
-        """Return the state attributes."""
-        tasks = [t for t in self.coordinator.data.get("tasks", []) 
-                if t["project_id"] == self.project_id]
-        
-        in_progress = len([t for t in tasks if t["is_active"] == 1])
-        stopped = len(tasks) - in_progress
-        
-        return {
-            "in_progress": in_progress,
-            "stopped": stopped,
-            "total": len(tasks)
-        }
+    @Throttle(MIN_TIME_BETWEEN_UPDATES)
+    def update(self):
+        """Fetch new state data for the sensor."""
+        try:
+            response = requests.post(
+                self.api_url,
+                json={
+                    "jsonrpc": "2.0",
+                    "method": "getAllTasks",
+                    "id": 1,
+                    "params": {"token": self.api_token},
+                },
+            )
+            data = response.json()["result"]
+            projects = {}
+            for task in data:
+                project_id = task["project_id"]
+                if project_id not in projects:
+                    projects[project_id] = {"total": 0, "in_progress": 0, "stalled": 0}
+                projects[project_id]["total"] += 1
+                if task["is_active"] == 1:
+                    projects[project_id]["in_progress"] += 1
+                else:
+                    projects[project_id]["stalled"] += 1
+            self._state = len(projects)
+            self._attributes = projects
+        except Exception as e:
+            _LOGGER.error(f"Error fetching tasks per project data: {e}")
