@@ -1,4 +1,4 @@
-"""Platform for Kanboard sensor integration."""
+"""Platform for Kanboardizersensor integration."""
 from datetime import datetime, timedelta
 import logging
 
@@ -19,7 +19,7 @@ async def async_setup_entry(
     config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up the Kanboard sensor."""
+    """Set up the Kanboardizersensor."""
     client = Client(
         url=config_entry.data["url"],
         token=config_entry.data["api_token"]
@@ -42,7 +42,7 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 class KanboardDataUpdateCoordinator(DataUpdateCoordinator):
-    """Class to manage fetching Kanboard data."""
+    """Class to manage fetching Kanboardizerdata."""
 
     def __init__(self, hass: HomeAssistant, client: Client) -> None:
         """Initialize."""
@@ -80,12 +80,12 @@ class KanboardDataUpdateCoordinator(DataUpdateCoordinator):
         return data
 
 class KanboardUserCountSensor(BaseCoordinatorEntity, SensorEntity):
-    """Sensor for tracking number of Kanboard users."""
+    """Sensor for tracking number of Kanboardizerusers."""
 
     def __init__(self, coordinator):
         """Initialize the sensor."""
         super().__init__(coordinator)
-        self._attr_name = "Kanboard Users"
+        self._attr_name = "KanboardizerUsers"
         self._attr_unique_id = f"{DOMAIN}_users"
 
     @property
@@ -94,12 +94,12 @@ class KanboardUserCountSensor(BaseCoordinatorEntity, SensorEntity):
         return len(self.coordinator.data.get("users", []))
 
 class KanboardProjectCountSensor(BaseCoordinatorEntity, SensorEntity):
-    """Sensor for tracking number of Kanboard projects."""
+    """Sensor for tracking number of Kanboardizerprojects."""
 
     def __init__(self, coordinator):
         """Initialize the sensor."""
         super().__init__(coordinator)
-        self._attr_name = "Kanboard Projects"
+        self._attr_name = "KanboardizerProjects"
         self._attr_unique_id = f"{DOMAIN}_projects"
 
     @property
@@ -122,12 +122,12 @@ class KanboardProjectCountSensor(BaseCoordinatorEntity, SensorEntity):
         }
 
 class KanboardTaskCountSensor(BaseCoordinatorEntity, SensorEntity):
-    """Sensor for tracking number of Kanboard tasks."""
+    """Sensor for tracking number of Kanboardizertasks."""
 
     def __init__(self, coordinator):
         """Initialize the sensor."""
         super().__init__(coordinator)
-        self._attr_name = "Kanboard Tasks"
+        self._attr_name = "KanboardizerTasks"
         self._attr_unique_id = f"{DOMAIN}_tasks"
 
     @property
@@ -164,13 +164,13 @@ class KanboardTaskCountSensor(BaseCoordinatorEntity, SensorEntity):
         }
 
 class KanboardProjectTaskSensor(BaseCoordinatorEntity, SensorEntity):
-    """Sensor for tracking tasks in a specific Kanboard project."""
+    """Sensor for tracking tasks in a specific Kanboardizerproject."""
 
     def __init__(self, coordinator, project_id, project_name):
         """Initialize the sensor."""
         super().__init__(coordinator)
         self.project_id = project_id
-        self._attr_name = f"Kanboard Project {project_name} Tasks"
+        self._attr_name = f"KanboardizerProject {project_name} Tasks"
         self._attr_unique_id = f"{DOMAIN}_project_{project_id}_tasks"
 
     @property

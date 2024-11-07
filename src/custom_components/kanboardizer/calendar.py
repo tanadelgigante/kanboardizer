@@ -1,4 +1,4 @@
-"""Calendar platform for Kanboard integration."""
+"""Calendar platform for Kanboardizer integration."""
 
 from .const import DOMAIN, CALENDAR_NAME
 from argparse import OPTIONAL
@@ -16,13 +16,13 @@ async def async_setup_entry(
     config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up the Kanboard calendar."""
+    """Set up the Kanboardizer calendar."""
     coordinator = hass.data[DOMAIN][config_entry.entry_id]
-    async_add_entities([KanboardCalendar(coordinator)], True)
+    async_add_entities([KanboardizerCalendar(coordinator)], True)
 
 
-class KanboardCalendar(BaseCoordinatorEntity, CalendarEntity):
-    """Kanboard Calendar class."""
+class KanboardizerCalendar(BaseCoordinatorEntity, CalendarEntity):
+    """Kanboardizer Calendar class."""
 
     def __init__(self, coordinator):
         """Initialize the calendar."""

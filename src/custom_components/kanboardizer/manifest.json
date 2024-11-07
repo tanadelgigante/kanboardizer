@@ -5,7 +5,7 @@
   "documentation": "https://git.gitea.com/alessio/kanboardizer",
   "dependencies": [],
   "codeowners": ["@alessio"],
-  "requirements": ["requests"],
+  "requirements": ["kanboard==1.0.3"],
   "repository": "https://repo.kenshiro.local/alessio/kanboardizer",
   "iot_class": "cloud_polling"
 }
