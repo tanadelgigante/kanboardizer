@@ -3,6 +3,7 @@ import requests
 import logging
 from homeassistant.helpers.entity import Entity
 from homeassistant.util import Throttle
+from _datetime import datetime
 
 MIN_TIME_BETWEEN_UPDATES = timedelta(minutes=10)
 
@@ -17,7 +18,8 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
         KanboardUserCountSensor(api_url, api_token, hass),
         KanboardProjectCountSensor(api_url, api_token, hass),
         KanboardTaskCountSensor(api_url, api_token, hass),
-        KanboardProjectTaskCountSensor(api_url, api_token, hass)
+        KanboardProjectTaskCountSensor(api_url, api_token, hass), 
+        KanboardCalendarSensor(api_url, api_token, hass)
     ]
     
     add_entities(sensors, True)
@@ -66,7 +68,11 @@ class KanboardUserCountSensor(KanboardSensor):
                     "params": {"token": self.api_token},
                 },
             )
-            data = response.json()["result"]
+            _LOGGER.debug(f"API Response: {response.json()}")
+            data = response.json().get("result")
+            if data is None:
+                _LOGGER.error(f"Unexpected API response format: {response.json()}")
+                return
             self._state = len(data)
         except Exception as e:
             _LOGGER.error(f"Error fetching user data: {e}")
@@ -174,3 +180,58 @@ class KanboardProjectTaskCountSensor(KanboardSensor):
             self._attributes = projects
         except Exception as e:
             _LOGGER.error(f"Error fetching tasks per project data: {e}")
+            
+class KanboardCalendarSensor(KanboardSensor):
+    """Sensor for Kanboard task deadlines."""
+    def __init__(self, api_url, api_token, hass):
+        """Initialize the calendar sensor."""
+        super().__init__(api_url, api_token, hass)
+        self._name = "Kanboard Task Calendar"
+
+    @property
+    def name(self):
+        """Return the name of the sensor."""
+        return self._name
+
+    @Throttle(MIN_TIME_BETWEEN_UPDATES)
+    def update(self):
+        """Fetch new state data for the sensor."""
+        try:
+            _LOGGER.debug("Fetching task deadlines...")
+            response = requests.post(
+                self.api_url,
+                json={
+                    "jsonrpc": "2.0",
+                    "method": "getAllTasks",
+                    "id": 1,
+                    "params": {"token": self.api_token},
+                },
+            )
+            data = response.json()["result"]
+            deadlines = [task for task in data if task.get("date_due")]
+            _LOGGER.debug(f"Task deadlines: {deadlines}")
+            self._state = len(deadlines)
+            self._attributes = {"deadlines": deadlines}
+            
+            current_time = datetime.now()
+            for task in deadlines:
+                task_due_date = datetime.fromtimestamp(task["date_due"])
+                days_until_due = (task_due_date - current_time).days
+                if days_until_due <= 2 and task_due_date > current_time:
+                    _LOGGER.debug(f"Task due soon: {task}")
+                    self.hass.bus.fire("kanboard_task_due_soon", {
+                        "task_id": task["id"],
+                        "title": task["title"],
+                        "due_date": task_due_date.isoformat(),
+                        "days_until_due": days_until_due
+                    })
+                elif task_due_date < current_time:
+                    _LOGGER.debug(f"Task overdue: {task}")
+                    self.hass.bus.fire("kanboard_task_overdue", {
+                        "task_id": task["id"],
+                        "title": task["title"],
+                        "due_date": task_due_date.isoformat()
+                    })
+        except Exception as e:
+            _LOGGER.error(f"Error fetching task deadlines: {e}")
+
