@@ -1,9 +1,10 @@
+from _datetime import datetime
 from datetime import timedelta
-import requests
-import logging
 from homeassistant.helpers.entity import Entity
 from homeassistant.util import Throttle
-from _datetime import datetime
+import logging
+import requests
+
 
 MIN_TIME_BETWEEN_UPDATES = timedelta(minutes=10)
 

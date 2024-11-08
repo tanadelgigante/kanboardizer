@@ -1,10 +1,11 @@
-import logging
-import requests
-import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import discovery
 from homeassistant.helpers.typing import ConfigType
+import logging
+import requests
+import voluptuous as vol
+
 
 _LOGGER = logging.getLogger(__name__)
 
