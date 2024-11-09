@@ -22,3 +22,5 @@ Then edit your `configuration.yaml` by adding the Kanboardizer section:
 The API token could be copied from the _Settings_ section of your user.
 
 Then restart your Home Assistant instance.
+
+This component is not affiliated or related to Kanboard developers and is used for study of the Kanboard and Home Assistant capabilities. This component is intended "as-is" and the author is not responsible for malfunctioning or damaging of your systems. Any collaboration is welcome.
