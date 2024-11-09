@@ -2,7 +2,7 @@
   "domain": "kanboardizer",
   "name": "Kanboardizer",
   "version": "1.0.1",
-  "documentation": https://github.com/ilgigante77/kanboardizer/README.md",
+  "documentation": "https://github.com/ilgigante77/kanboardizer/README.md",
   "dependencies": [],
   "codeowners": ["@ilgigante77"],
   "requirements": ["requests"],
