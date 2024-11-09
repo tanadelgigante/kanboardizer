@@ -17,7 +17,7 @@ CONFIG_SCHEMA = vol.Schema(
             {
                 vol.Required("api_url"): str,
                 vol.Required("api_token"): str,
-                vol.Required("user"): str,
+                vol.Optional("user"): str,
             }
         )
     },

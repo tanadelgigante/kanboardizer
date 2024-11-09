@@ -16,21 +16,22 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     api_token = hass.data["kanboardizer"]["api_token"]
 
     sensors = [
-        KanboardUserCountSensor(api_url, api_token, hass),
-        KanboardProjectCountSensor(api_url, api_token, hass),
-        KanboardTaskCountSensor(api_url, api_token, hass),
-        KanboardCalendarSensor(api_url, api_token, hass)
+        KanboardUserCountSensor(api_url, api_token, hass, "mdi:account"),
+        KanboardProjectCountSensor(api_url, api_token, hass, "mdi:briefcase-check"),
+        KanboardTaskCountSensor(api_url, api_token, hass, "mdi:clipboard-check"),
+        KanboardCalendarSensor(api_url, api_token, hass, "mdi:calendar-clock")
     ]
     
     add_entities(sensors, True)
 
 class KanboardSensor(Entity):
     """Representation of a base Kanboard sensor."""
-    def __init__(self, api_url, api_token, hass):
+    def __init__(self, api_url, api_token, hass, icon):
         """Initialize the sensor."""
         self.api_url = api_url
         self.api_token = api_token
         self.hass = hass
+        self._icon = icon
         self._state = None
         self._attributes = {}
 
@@ -38,6 +39,10 @@ class KanboardSensor(Entity):
     def state(self):
         """Return the state of the sensor."""
         return self._state
+    
+    @property
+    def icon(self):
+        return self._icon
 
     @property
     def extra_state_attributes(self):
@@ -46,9 +51,9 @@ class KanboardSensor(Entity):
 
 class KanboardUserCountSensor(KanboardSensor):
     """Sensor for the number of users."""
-    def __init__(self, api_url, api_token, hass):
+    def __init__(self, api_url, api_token, hass, icon):
         """Initialize the user count sensor."""
-        super().__init__(api_url, api_token, hass)
+        super().__init__(api_url, api_token, hass, icon)
 
     @property
     def name(self):
@@ -79,9 +84,9 @@ class KanboardUserCountSensor(KanboardSensor):
 
 class KanboardProjectCountSensor(KanboardSensor):
     """Sensor for the number of projects."""
-    def __init__(self, api_url, api_token, hass):
+    def __init__(self, api_url, api_token, hass, icon):
         """Initialize the project count sensor."""
-        super().__init__(api_url, api_token, hass)
+        super().__init__(api_url, api_token, hass, icon)
 
     @property
     def name(self):
@@ -111,9 +116,9 @@ class KanboardProjectCountSensor(KanboardSensor):
 
 class KanboardTaskCountSensor(KanboardSensor):
     """Sensor for the total number of tasks."""
-    def __init__(self, api_url, api_token, hass):
+    def __init__(self, api_url, api_token, hass, icon):
         """Initialize the task count sensor."""
-        super().__init__(api_url, api_token, hass)
+        super().__init__(api_url, api_token, hass, icon)
 
     @property
     def name(self):
@@ -197,9 +202,9 @@ class KanboardTaskCountSensor(KanboardSensor):
 
 class KanboardCalendarSensor(KanboardSensor):
     """Sensor for Kanboard task deadlines."""
-    def __init__(self, api_url, api_token, hass):
+    def __init__(self, api_url, api_token, hass, icon):
         """Initialize the calendar sensor."""
-        super().__init__(api_url, api_token, hass)
+        super().__init__(api_url, api_token, hass, icon)
         self._name = "Kanboard Task Calendar"
 
     @property

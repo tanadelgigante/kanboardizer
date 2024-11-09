@@ -1,11 +1,12 @@
 {
   "domain": "kanboardizer",
   "name": "Kanboardizer",
-  "version": "1.0.0",
-  "documentation": "https://git.gitea.com/alessio/kanboardizer",
+  "version": "1.0.1",
+  "documentation": https://github.com/ilgigante77/kanboardizer/README.md",
   "dependencies": [],
-  "codeowners": ["@alessio"],
+  "codeowners": ["@ilgigante77"],
   "requirements": ["requests"],
-  "repository": "https://repo.kenshiro.local/alessio/kanboardizer",
-  "iot_class": "cloud_polling"
+  "issue_tracker": "https://github.com/ilgigante77/kanboardizer/issues",
+  "iot_class": "cloud_polling", 
+  "icon": "custom_components/kanboardizer/icon.svg"
 }
